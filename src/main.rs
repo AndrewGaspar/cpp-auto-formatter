@@ -133,10 +133,7 @@ impl App {
         Ok(())
     }
 
-    fn list_files(&self) -> impl Iterator<Item = String> {
-        let includes = self.includes.clone();
-        let excludes = self.excludes.clone();
-
+    fn list_files<'a>(&'a self) -> impl Iterator<Item = String> + 'a {
         BufReader::new(
             Command::new("git")
                 .args(&["ls-tree", "-r", "HEAD", "--name-only", "--full-tree"])
@@ -148,8 +145,8 @@ impl App {
         )
         .lines()
         .map(|s| s.unwrap())
-        .filter(move |s| includes.iter().any(|p| p.matches(&s)))
-        .filter(move |s| !excludes.iter().any(|p| p.matches(&s)))
+        .filter(move |s| self.includes.iter().any(|p| p.matches(&s)))
+        .filter(move |s| !self.excludes.iter().any(|p| p.matches(&s)))
     }
 
     fn format_all(&self) {
