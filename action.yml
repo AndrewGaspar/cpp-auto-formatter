@@ -27,9 +27,12 @@ runs:
     image: 'Dockerfile'
     args:
     - --github-action
-    - --clang-format-version ${{ inputs.clangFormatVersion }}
-    - --include ${{ inputs.include }}
-    - --exclude ${{ inputs.exclude }}
+    - --clang-format-version
+    - ${{ inputs.clangFormatVersion }}
+    - --include
+    - ${{ inputs.include }}
+    - --exclude
+    - ${{ inputs.exclude }}
     - check
 branding:
     icon: 'align-left'
