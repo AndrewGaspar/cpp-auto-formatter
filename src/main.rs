@@ -88,7 +88,6 @@ impl App {
                 .unwrap()
                 .into()
             };
-        dbg!(&clang_format_path);
 
         if !clang_format_path.exists() {
             eprintln!("Error: No clang-format version {}", clang_format_version);
