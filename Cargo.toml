@@ -1,0 +1,9 @@
+[package]
+name = "clang-format-action"
+version = "0.1.0"
+authors = ["Andrew Gaspar <andrew.gaspar@outlook.com>"]
+edition = "2018"
+
+[dependencies]
+git2 = "0.13"
+clap = "2.33.0"
