@@ -6,7 +6,6 @@ use std::{
     env,
     error::Error,
     io::{BufRead, BufReader},
-    mem,
     path::PathBuf,
     process::{self, Command, Stdio},
 };
