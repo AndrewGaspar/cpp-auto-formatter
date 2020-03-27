@@ -16,4 +16,4 @@ RUN apt-get install -y git
 # Install clang-formats
 ADD ./clang-format /clang-format
 COPY --from=builder /usr/local/cargo/bin/cpp-auto-format /cpp-auto-format
-ENTRYPOINT [ "./cpp-auto-format" ]
+ENTRYPOINT [ "/cpp-auto-format" ]
