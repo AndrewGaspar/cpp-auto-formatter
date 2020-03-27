@@ -89,6 +89,7 @@ impl App {
                 .unwrap()
                 .into()
             };
+        dbg!(&clang_format_path);
 
         if !clang_format_path.exists() {
             eprintln!("Error: No clang-format version {}", clang_format_version);
@@ -154,16 +155,12 @@ impl App {
 
     fn format_all(&self) {
         self.list_files().par_bridge().for_each(|file| {
-            fn internal(clang_format_path: &PathBuf, file: &str) -> Result<(), Box<dyn Error>> {
-                Command::new(clang_format_path)
-                    .args(&["-i", &file])
-                    .spawn()?
-                    .wait()?;
-
-                Ok(())
-            }
-
-            mem::forget(internal(&self.clang_format_path, &file));
+            Command::new(&self.clang_format_path)
+                .args(&["-i", &file])
+                .spawn()
+                .unwrap()
+                .wait()
+                .unwrap();
         });
     }
 
