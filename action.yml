@@ -1,0 +1,36 @@
+name: 'C++ Auto-Format (clang-format automation and checks)'
+description:
+    C++ Auto-Format provides the ability to both auto-format your code, and to
+    check that your code is formatted.
+inputs:
+    clangFormatVersion:
+        description:
+            Major Clang Version number. Supports clang 5 to 10. Default 10
+        required: false
+        default: '10'
+    include:
+        description:
+            Comma-separated list of file globs (e.g '**/*.cpp,**/*.hpp') that
+            matches which tracked files should be formatted.
+        required: false
+        default:
+            '**/*.c,**/*.h,**/*.C,**/*.H,**/*.cpp,**/*.hpp,**/*.cxx,**/*.hxx,**/*.c++,**/*.h++,**/*.cc,**/*.hh'
+    exclude:
+        description:
+            Comma-separate list of files globs that indicate which files should
+            not be formatted.
+        required: false
+        default: ''
+outputs:
+runs:
+    using: 'docker'
+    image: 'Dockerfile'
+    args:
+    - --github-action
+    - --clang-format-version ${{ inputs.clangFormatVersion }}
+    - --include ${{ inputs.include }}
+    - --exclude ${{ inputs.exclude }}
+    - check
+branding:
+    icon: 'align-left'
+    color: 'red'

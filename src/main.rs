@@ -29,7 +29,7 @@ struct App {
 
 impl App {
     fn run() -> Result<(), Box<dyn Error>> {
-        let matches = clap::App::new("clang-format-action")
+        let matches = clap::App::new("cpp-auto-format")
             .author("Andrew Gaspar <andrew.gaspar@outlook.com>")
             .about("Runner code for executing clang-format")
             .arg(
@@ -54,7 +54,7 @@ impl App {
                     .takes_value(true)
                     .required(true)
                     .value_delimiter(",")
-                    .default_value("**/*.cpp,**/*.hpp,**/*.c,**/*.h,**/*.hxx,**/*.cxx,**/*.c++,**/*.h++,**/*.cc,**/*.hh,**/*.C,**/*.H"),
+                    .default_value("**/*.c,**/*.h,**/*.C,**/*.H,**/*.cpp,**/*.hpp,**/*.cxx,**/*.hxx,**/*.c++,**/*.h++,**/*.cc,**/*.hh"),
             )
             .arg(
                 Arg::with_name("exclude")

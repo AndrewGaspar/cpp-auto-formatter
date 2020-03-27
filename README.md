@@ -1,6 +1,6 @@
-# GitHub clang-format Action
-This is a GitHub Action that can both automatically clang-format code and
-provide a clang-format check.
+# C++ Auto-Format
+This is a GitHub Action that provides both automatic clang-formatting and CI
+checks.
 
 ## Building
 This GitHub Action is a docker container action, so it requires a build step.
