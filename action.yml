@@ -20,7 +20,7 @@ inputs:
             Comma-separate list of files globs that indicate which files should
             not be formatted.
         required: false
-        default: ''
+        default: '""'
 outputs:
 runs:
     using: 'docker'
