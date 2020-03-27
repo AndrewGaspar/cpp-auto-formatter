@@ -13,9 +13,53 @@ use std::{
 // Third Party Imports
 use clap::{Arg, ArgMatches, SubCommand};
 use glob::Pattern;
+use serde::Deserialize;
 
 fn main() -> Result<(), Box<dyn Error>> {
     App::run()
+}
+
+#[allow(unused)]
+#[derive(Deserialize, Debug)]
+struct GitHubIssueCommentEvent {
+    action: String,
+    comment: GitHubIssueComment,
+}
+
+#[allow(unused)]
+#[derive(Deserialize, Debug)]
+struct GitHubIssueComment {
+    id: usize,
+    node_id: String,
+    url: String,
+    html_url: String,
+    body: String,
+    user: GitHubUser,
+    created_at: String,
+    updated_at: String,
+}
+
+#[allow(unused)]
+#[derive(Deserialize, Debug)]
+struct GitHubUser {
+    login: String,
+    id: usize,
+    node_id: String,
+    avatar_url: String,
+    gravatar_id: String,
+    url: String,
+    html_url: String,
+    followers_url: String,
+    following_url: String,
+    gists_url: String,
+    starred_url: String,
+    subscriptions_url: String,
+    organizations_url: String,
+    repos_url: String,
+    events_url: String,
+    received_events_url: String,
+    r#type: String,
+    site_admin: bool,
 }
 
 #[derive(Debug)]
@@ -24,6 +68,7 @@ struct App {
     includes: Vec<Pattern>,
     excludes: Vec<Pattern>,
     github_workspace: PathBuf,
+    bot_name: String,
 }
 
 impl App {
@@ -62,7 +107,13 @@ impl App {
                     .value_delimiter(",")
                     .default_value(""),
             )
-            .subcommand(SubCommand::with_name("commit"))
+            .arg(
+                Arg::with_name("bot-name")
+                    .long("bot-name")
+                    .takes_value(true)
+                    .default_value("cpp-auto-formatter")
+            )
+            .subcommand(SubCommand::with_name("command"))
             .subcommand(SubCommand::with_name("check"))
             .subcommand(SubCommand::with_name("list"))
             .get_matches();
@@ -72,7 +123,7 @@ impl App {
         let clang_format_path: PathBuf =
             if let Some(clang_format_override) = matches.value_of("clang-format-override") {
                 clang_format_override.into()
-            } else if matches.is_present("github-action") {
+            } else if env::var("GITHUB_ACTION").is_ok() {
                 format!("/clang-format/clang-format-{}", clang_format_version).into()
             } else {
                 String::from_utf8(
@@ -105,8 +156,8 @@ impl App {
             .map(Pattern::new)
             .collect::<Result<Vec<_>, _>>()?;
 
-        if matches.is_present("github-action") {
-            env::set_current_dir(PathBuf::from(env::var("GITHUB_WORKSPACE")?))?;
+        if let Ok(github_workspace) = env::var("GITHUB_WORKSPACE") {
+            env::set_current_dir(PathBuf::from(github_workspace))?;
         }
 
         let app = App {
@@ -114,6 +165,7 @@ impl App {
             includes,
             excludes,
             github_workspace: PathBuf::new(),
+            bot_name: matches.value_of("bot-name").unwrap().into(),
         };
 
         if let Some(matches) = matches.subcommand_matches("list") {
@@ -121,10 +173,8 @@ impl App {
             process::exit(0);
         }
 
-        app.format_all();
-
         match matches.subcommand() {
-            ("commit", matches) => app.commit(matches.unwrap())?,
+            ("command", matches) => app.command(matches.unwrap())?,
             ("check", matches) => app.check(matches.unwrap())?,
             _ => panic!("Unexcepted subcommand"),
         }
@@ -159,7 +209,48 @@ impl App {
         });
     }
 
-    fn commit(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    fn output_help(&self, _app: clap::App) {}
+
+    fn command(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+        if env::var("GITHUB_EVENT_NAME")? != "issue_comment" {
+            eprintln!("Error: This action is only compatible with 'issue_comment' events");
+            process::exit(1);
+        }
+
+        let payload = load_payload()?;
+
+        if !payload
+            .comment
+            .body
+            .starts_with(&format!("@{}", self.bot_name))
+        {
+            eprintln!("Error: The command must start with @{}", self.bot_name);
+            std::process::exit(1);
+        }
+
+        let command_arr = shell_words::split(&payload.body)?;
+
+        let mut app = clap::App::new(&format!("@{}", self.bot_name)).subcommand(
+            SubCommand::with_name("format").arg(Arg::with_name("squash").long("squash")),
+        );
+
+        let matches = match app.get_matches_from_safe_borrow(command_arr) {
+            Ok(matches) => matches,
+            Err(_) => {
+                self.output_help(app);
+                std::process::exit(1);
+            }
+        };
+
+        let _matches = if let Some(matches) = matches.subcommand_matches("format") {
+            matches
+        } else {
+            self.output_help(app);
+            std::process::exit(1);
+        };
+
+        self.format_all();
+
         process::exit(
             Command::new("git")
                 .args(&["commit", "-am", "GitHub clang-format Action"])
@@ -171,6 +262,7 @@ impl App {
     }
 
     fn check(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+        self.format_all();
         process::exit(
             Command::new("git")
                 .args(&["diff", "--exit-code"])
@@ -187,4 +279,10 @@ impl App {
         }
         process::exit(0)
     }
+}
+
+fn load_payload() -> Result<GitHubIssueCommentEvent, Box<dyn Error>> {
+    let github_event_path = env::var("GITHUB_EVENT_PATH")?;
+    let github_event = dbg!(std::fs::read_to_string(&github_event_path)?);
+    Ok(serde_json::from_str(&github_event)?)
 }

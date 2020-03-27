@@ -21,6 +21,12 @@ inputs:
       not be formatted.
     required: false
     default: '""'
+  botName:
+    description: >
+      The name of the bot. E.g. with "botName: 'mybot'", the command is invoked
+      with @mybot.
+    required: false
+    default: 'cpp-auto-formatter'
 outputs:
 runs:
   using: 'docker'
@@ -32,7 +38,9 @@ runs:
   - ${{ inputs.include }}
   - --exclude
   - ${{ inputs.exclude }}
-  - check
+  - --bot-name
+  - ${{ inputs.botName }}
+  - command
 branding:
   icon: 'align-left'
   color: 'red'
