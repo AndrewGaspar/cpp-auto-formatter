@@ -40,7 +40,6 @@ impl App {
                 Arg::with_name("clang-format-version")
                     .long("clang-format-version")
                     .takes_value(true)
-                    .required_if("github-action", "")
                     .default_value("10"),
             )
             .arg(
