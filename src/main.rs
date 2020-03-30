@@ -211,6 +211,27 @@ impl App {
 
     fn output_help(&self, _app: clap::App) {}
 
+    fn configure_author(&self) -> Result<(), Box<dyn Error>> {
+        assert!(Command::new("git")
+            .args(&[
+                "config",
+                "--global",
+                "user.email",
+                &format!("{}@automation.bot", self.bot_name),
+            ])
+            .spawn()?
+            .wait()?
+            .success());
+
+        assert!(Command::new("git")
+            .args(&["config", "--global", "user.name", &self.bot_name,])
+            .spawn()?
+            .wait()?
+            .success());
+
+        Ok(())
+    }
+
     fn command(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         if env::var("GITHUB_EVENT_NAME")? != "issue_comment" {
             eprintln!("Error: This action is only compatible with 'issue_comment' events");
@@ -249,11 +270,13 @@ impl App {
             std::process::exit(1);
         };
 
+        self.configure_author()?;
+
         self.format_all();
 
         process::exit(
             Command::new("git")
-                .args(&["commit", "-am", "GitHub clang-format Action"])
+                .args(&["commit", "-am", "cpp-auto-formatter"])
                 .spawn()?
                 .wait()?
                 .code()
