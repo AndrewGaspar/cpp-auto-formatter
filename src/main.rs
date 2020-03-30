@@ -228,7 +228,7 @@ impl App {
             std::process::exit(1);
         }
 
-        let command_arr = shell_words::split(&payload.body)?;
+        let command_arr = shell_words::split(&payload.comment.body)?;
 
         let mut app = clap::App::new(&format!("@{}", self.bot_name)).subcommand(
             SubCommand::with_name("format").arg(Arg::with_name("squash").long("squash")),
