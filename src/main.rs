@@ -238,6 +238,9 @@ impl App {
             process::exit(1);
         }
 
+        let branch = env::var("GITHUB_REF").unwrap();
+        assert!(branch.starts_with("refs/heads/"));
+        let branch = &branch["refs/heads/".len()..];
         let payload = load_payload()?;
 
         if !payload
@@ -274,14 +277,19 @@ impl App {
 
         self.format_all();
 
-        process::exit(
-            Command::new("git")
-                .args(&["commit", "-am", "cpp-auto-formatter"])
-                .spawn()?
-                .wait()?
-                .code()
-                .unwrap_or(1),
-        );
+        assert!(Command::new("git")
+            .args(&["commit", "-am", "cpp-auto-formatter"])
+            .spawn()?
+            .wait()?
+            .success());
+
+        assert!(Command::new("git")
+            .args(&["push", "-u", "origin", branch])
+            .spawn()?
+            .wait()?
+            .success());
+
+        Ok(())
     }
 
     fn check(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
@@ -306,6 +314,6 @@ impl App {
 
 fn load_payload() -> Result<GitHubIssueCommentEvent, Box<dyn Error>> {
     let github_event_path = env::var("GITHUB_EVENT_PATH")?;
-    let github_event = dbg!(std::fs::read_to_string(&github_event_path)?);
+    let github_event = std::fs::read_to_string(&github_event_path)?;
     Ok(serde_json::from_str(&github_event)?)
 }
