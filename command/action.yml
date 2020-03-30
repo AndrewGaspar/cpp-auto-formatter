@@ -27,7 +27,6 @@ inputs:
       with @mybot.
     required: false
     default: 'cpp-auto-formatter'
-outputs:
 runs:
   using: 'docker'
   image: '../Dockerfile'
