@@ -315,5 +315,5 @@ impl App {
 fn load_payload() -> Result<GitHubIssueCommentEvent, Box<dyn Error>> {
     let github_event_path = env::var("GITHUB_EVENT_PATH")?;
     let github_event = std::fs::read_to_string(&github_event_path)?;
-    Ok(serde_json::from_str(&github_event)?)
+    Ok(serde_json::from_str(dbg!(&github_event))?)
 }
