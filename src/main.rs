@@ -13,53 +13,13 @@ use std::{
 // Third Party Imports
 use clap::{Arg, ArgMatches, SubCommand};
 use glob::Pattern;
-use serde::Deserialize;
+
+mod github;
+
+use github::*;
 
 fn main() -> Result<(), Box<dyn Error>> {
     App::run()
-}
-
-#[allow(unused)]
-#[derive(Deserialize, Debug)]
-struct GitHubIssueCommentEvent {
-    action: String,
-    comment: GitHubIssueComment,
-}
-
-#[allow(unused)]
-#[derive(Deserialize, Debug)]
-struct GitHubIssueComment {
-    id: usize,
-    node_id: String,
-    url: String,
-    html_url: String,
-    body: String,
-    user: GitHubUser,
-    created_at: String,
-    updated_at: String,
-}
-
-#[allow(unused)]
-#[derive(Deserialize, Debug)]
-struct GitHubUser {
-    login: String,
-    id: usize,
-    node_id: String,
-    avatar_url: String,
-    gravatar_id: String,
-    url: String,
-    html_url: String,
-    followers_url: String,
-    following_url: String,
-    gists_url: String,
-    starred_url: String,
-    subscriptions_url: String,
-    organizations_url: String,
-    repos_url: String,
-    events_url: String,
-    received_events_url: String,
-    r#type: String,
-    site_admin: bool,
 }
 
 #[derive(Debug)]
@@ -238,9 +198,6 @@ impl App {
             process::exit(1);
         }
 
-        let branch = env::var("GITHUB_REF").unwrap();
-        assert!(branch.starts_with("refs/heads/"));
-        let branch = &branch["refs/heads/".len()..];
         let payload = load_payload()?;
 
         if !payload
@@ -251,6 +208,14 @@ impl App {
             eprintln!("Error: The command must start with @{}", self.bot_name);
             std::process::exit(1);
         }
+
+        let pull_request = match payload.issue.pull_request {
+            Some(pr) => reqwest::blocking::get(&pr.url)?.json::<GitHubPullRequest>()?,
+            None => {
+                eprintln!("Error: cpp-auto-formatter only works with PR comments");
+                std::process::exit(1);
+            }
+        };
 
         let command_arr = shell_words::split(&payload.comment.body)?;
 
@@ -283,11 +248,11 @@ impl App {
             .wait()?
             .success());
 
-        assert!(Command::new("git")
-            .args(&["push", "-u", "origin", branch])
-            .spawn()?
-            .wait()?
-            .success());
+        // assert!(Command::new("git")
+        //     .args(&["push", "-u", "origin", branch])
+        //     .spawn()?
+        //     .wait()?
+        //     .success());
 
         Ok(())
     }
