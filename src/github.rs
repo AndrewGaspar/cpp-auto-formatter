@@ -117,23 +117,34 @@ pub struct GitHubPushEvent {
     pub commits: Vec<GitHubCommit>,
     pub head_commit: Option<GitHubCommit>,
     pub repository: GitHubRepository,
-    pub pusher: GitHubAuthor,
+    pub pusher: GitHubPusher,
     pub sender: GitHubUser,
 }
 
 #[allow(unused)]
 #[derive(Deserialize, Debug)]
 pub struct GitHubCommit {
-    pub sha: String,
-    pub message: String,
     pub author: GitHubAuthor,
-    pub url: String,
+    pub committer: GitHubAuthor,
     pub distinct: bool,
+    pub id: String,
+    pub message: String,
+    pub timestamp: String,
+    pub tree_id: String,
+    pub url: String,
 }
 
 #[allow(unused)]
 #[derive(Deserialize, Debug)]
 pub struct GitHubAuthor {
+    pub name: String,
+    pub email: String,
+    pub username: String,
+}
+
+#[allow(unused)]
+#[derive(Deserialize, Debug)]
+pub struct GitHubPusher {
     pub name: String,
     pub email: String,
 }
