@@ -12,7 +12,7 @@ pub struct GitHubIssueCommentEvent {
 
 #[derive(Deserialize, Debug)]
 pub struct GitHubPushEvent {
-    pub after: String,
+    pub r#ref: String,
     pub repository: GitHubEventRepository,
 }
 

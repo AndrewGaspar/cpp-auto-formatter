@@ -171,29 +171,6 @@ impl App {
         Ok(())
     }
 
-    fn clone_checkout_ref(&self, full_name: &str, r#ref: &str) -> Result<(), Box<dyn Error>> {
-        assert!(Command::new("git")
-            .args(&[
-                "clone",
-                &format!(
-                    "https://x-access-token:{}@github.com/{}.git",
-                    self.github_token, full_name
-                ),
-                ".",
-            ])
-            .spawn()?
-            .wait()?
-            .success());
-
-        assert!(Command::new("git")
-            .args(&["checkout", r#ref])
-            .spawn()?
-            .wait()?
-            .success());
-
-        Ok(())
-    }
-
     fn list_files<'a>(&'a self) -> impl Iterator<Item = String> + 'a {
         BufReader::new(
             Command::new("git")
@@ -303,7 +280,8 @@ impl App {
             std::process::exit(1);
         };
 
-        self.clone(&pull_request.head.repo.full_name, &pull_request.head.r#ref)?;
+        let branch = ref_to_branch(&pull_request.head.r#ref);
+        self.clone(&pull_request.head.repo.full_name, branch)?;
         self.configure()?;
         self.format_all();
 
@@ -324,7 +302,8 @@ impl App {
 
     fn check(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         let payload: GitHubPushEvent = dbg!(load_payload()?);
-        self.clone_checkout_ref(&payload.repository.full_name, &payload.after)?;
+        let branch = ref_to_branch(&payload.r#ref);
+        self.clone(&payload.repository.full_name, branch)?;
         self.format_all();
 
         process::exit(
@@ -349,4 +328,14 @@ fn load_payload<T: DeserializeOwned>() -> Result<T, Box<dyn Error>> {
     let github_event_path = env::var("GITHUB_EVENT_PATH")?;
     let github_event = std::fs::read_to_string(&github_event_path)?;
     Ok(serde_json::from_str(dbg!(&github_event))?)
+}
+
+fn ref_to_branch(r#ref: &str) -> &str {
+    let expected_prefix = "refs/heads/";
+    assert!(
+        r#ref.starts_with(expected_prefix),
+        "Unexpected push ref: {}",
+        r#ref
+    );
+    &r#ref[expected_prefix.len()..]
 }
