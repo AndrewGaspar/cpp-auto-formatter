@@ -223,14 +223,14 @@ impl App {
 
         // put the usage in code quotes
         let body = format!(
-            r#"\
+            "\
 ```
 USAGE:
     @{} format [--amend]
 
 FLAGS:
     --amend Amends the previous commit with formatting
-```"#,
+```",
             self.bot_name
         );
 
@@ -308,7 +308,7 @@ FLAGS:
             }
         };
 
-        let _matches = if let Some(matches) = matches.subcommand_matches("format") {
+        let matches = if let Some(matches) = matches.subcommand_matches("format") {
             matches
         } else {
             self.output_help(&app, pull_request)?;
