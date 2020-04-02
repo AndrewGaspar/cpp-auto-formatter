@@ -289,8 +289,7 @@ impl App {
             std::process::exit(1);
         };
 
-        let branch = ref_to_branch(&pull_request.head.r#ref);
-        self.clone(&pull_request.head.repo.full_name, branch)?;
+        self.clone(&pull_request.head.repo.full_name, &pull_request.head.r#ref)?;
         self.configure()?;
         self.format_all();
 
