@@ -34,9 +34,6 @@ pub struct GitHubIssue {
 #[derive(Deserialize, Debug)]
 pub struct GitHubIssuePullRequest {
     pub url: String,
-    pub html_url: String,
-    pub diff_url: String,
-    pub patch_url: String,
 }
 
 // API

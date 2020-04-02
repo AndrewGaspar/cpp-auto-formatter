@@ -13,7 +13,7 @@ use std::{
 // Third Party Imports
 use clap::{Arg, ArgMatches, SubCommand};
 use glob::Pattern;
-use reqwest::header;
+use reqwest::{blocking::Client, header};
 use serde::de::DeserializeOwned;
 
 mod github;
@@ -221,16 +221,14 @@ impl App {
         Ok(())
     }
 
-    fn github_client(&self) -> Result<reqwest::blocking::Client, Box<dyn Error>> {
+    fn github_client(&self) -> Result<Client, Box<dyn Error>> {
         let mut headers = header::HeaderMap::new();
         headers.insert(
             header::AUTHORIZATION,
             header::HeaderValue::from_str(&format!("Bearer {}", self.github_token))?,
         );
 
-        Ok(reqwest::blocking::Client::builder()
-            .default_headers(headers)
-            .build()?)
+        Ok(Client::builder().default_headers(headers).build()?)
     }
 
     fn command(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
@@ -252,7 +250,7 @@ impl App {
         }
 
         let pull_request = match payload.issue.pull_request {
-            Some(pr) => dbg!(client.get(&pr.url).send()?.json::<GitHubPullRequest>()?),
+            Some(pr) => dbg!(dbg!(client.get(&pr.url).send()?).json::<GitHubPullRequest>()?),
             None => {
                 eprintln!("Error: cpp-auto-formatter only works with PR comments");
                 std::process::exit(1);
