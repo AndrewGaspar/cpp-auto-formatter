@@ -150,12 +150,12 @@ impl App {
         Ok(())
     }
 
-    fn clone(&self, full_name: &str, r#ref: &str) -> Result<(), Box<dyn Error>> {
+    fn clone(&self, full_name: &str, branch: &str) -> Result<(), Box<dyn Error>> {
         assert!(Command::new("git")
             .args(&[
                 "clone",
                 "-b",
-                r#ref,
+                branch,
                 "--depth",
                 "1",
                 &format!(
@@ -163,6 +163,28 @@ impl App {
                     self.github_token, full_name
                 )
             ])
+            .spawn()?
+            .wait()?
+            .success());
+
+        Ok(())
+    }
+
+    fn clone_checkout_ref(&self, full_name: &str, r#ref: &str) -> Result<(), Box<dyn Error>> {
+        assert!(Command::new("git")
+            .args(&[
+                "clone",
+                &format!(
+                    "https://x-access-token:{}@github.com/{}.git",
+                    self.github_token, full_name
+                )
+            ])
+            .spawn()?
+            .wait()?
+            .success());
+
+        assert!(Command::new("git")
+            .args(&["checkout", r#ref])
             .spawn()?
             .wait()?
             .success());
@@ -300,7 +322,7 @@ impl App {
 
     fn check(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         let payload: GitHubPushEvent = dbg!(load_payload()?);
-        self.clone(&payload.repository.full_name, &payload.after)?;
+        self.clone_checkout_ref(&payload.repository.full_name, &payload.after)?;
         self.format_all();
 
         process::exit(
