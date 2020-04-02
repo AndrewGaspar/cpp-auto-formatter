@@ -166,7 +166,7 @@ impl App {
         Ok(())
     }
 
-    fn clone(&self, full_name: &str, branch: &str) -> Result<(), Box<dyn Error>> {
+    fn clone(&self, full_name: &str, branch: &str, depth: usize) -> Result<(), Box<dyn Error>> {
         assert!(cmd(
             "git",
             &[
@@ -174,7 +174,7 @@ impl App {
                 "-b",
                 branch,
                 "--depth",
-                "1",
+                &depth.to_string(),
                 &format!(
                     "https://x-access-token:{}@github.com/{}.git",
                     self.github_token, full_name
@@ -316,7 +316,11 @@ FLAGS:
             std::process::exit(1);
         };
 
-        self.clone(&pull_request.head.repo.full_name, &pull_request.head.r#ref)?;
+        self.clone(
+            &pull_request.head.repo.full_name,
+            &pull_request.head.r#ref,
+            if matches.is_present("amend") { 2 } else { 1 },
+        )?;
         self.configure()?;
         self.format_all();
 
@@ -340,7 +344,7 @@ FLAGS:
     fn check(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         let payload: GitHubPushEvent = dbg!(load_payload()?);
         let branch = ref_to_branch(&payload.r#ref);
-        self.clone(&payload.repository.full_name, branch)?;
+        self.clone(&payload.repository.full_name, branch, 1)?;
         self.format_all();
 
         process::exit(
