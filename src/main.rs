@@ -333,7 +333,7 @@ FLAGS:
                 .success());
         } else {
             assert!(Command::new("git")
-                .args(&["commit", "-a", "--amend"])
+                .args(&["commit", "-a", "--amend", "--no-edit"])
                 .spawn()?
                 .wait()?
                 .success());
