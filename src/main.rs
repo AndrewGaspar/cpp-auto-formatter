@@ -250,7 +250,15 @@ impl App {
         }
 
         let pull_request = match payload.issue.pull_request {
-            Some(pr) => dbg!(dbg!(client.get(&pr.url).send()?).json::<GitHubPullRequest>()?),
+            Some(pr) => {
+                let response = dbg!(client.get(&pr.url).send()?);
+                if !response.status().is_success() {
+                    println!("Error: {}", response.text()?);
+                    std::process::exit(1);
+                } else {
+                    dbg!(response.json::<GitHubPullRequest>()?)
+                }
+            }
             None => {
                 eprintln!("Error: cpp-auto-formatter only works with PR comments");
                 std::process::exit(1);
