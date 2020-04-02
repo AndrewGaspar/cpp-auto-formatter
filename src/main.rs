@@ -221,11 +221,18 @@ impl App {
         let mut help = Vec::new();
         app.write_help(&mut help)?;
 
+        // put the usage in code quotes
+        let body = format!(
+            r#"\
+```
+{}
+```"#,
+            String::from_utf8(help)?
+        );
+
         self.github_client
             .post(&pull_request.comments_url)
-            .json(&GitHubIssueCreate {
-                body: String::from_utf8(help)?,
-            })
+            .json(&GitHubIssueCreate { body })
             .send()?;
         Ok(())
     }
