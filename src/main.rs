@@ -228,7 +228,10 @@ impl App {
             header::HeaderValue::from_str(&format!("token {}", self.github_token))?,
         );
 
-        Ok(Client::builder().default_headers(headers).build()?)
+        Ok(Client::builder()
+            .user_agent("cpp-auto-formatter")
+            .default_headers(headers)
+            .build()?)
     }
 
     fn command(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
