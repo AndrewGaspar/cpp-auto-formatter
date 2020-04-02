@@ -5,9 +5,10 @@ use rayon::prelude::*;
 use std::{
     env,
     error::Error,
+    ffi::OsStr,
     io::{BufRead, BufReader},
     path::PathBuf,
-    process::{self, Command, Stdio},
+    process::{self, Child, Command, Stdio},
 };
 
 // Third Party Imports
@@ -166,8 +167,9 @@ impl App {
     }
 
     fn clone(&self, full_name: &str, branch: &str) -> Result<(), Box<dyn Error>> {
-        assert!(Command::new("git")
-            .args(&[
+        assert!(cmd(
+            "git",
+            &[
                 "clone",
                 "-b",
                 branch,
@@ -178,10 +180,10 @@ impl App {
                     self.github_token, full_name
                 ),
                 ".",
-            ])
-            .spawn()?
-            .wait()?
-            .success());
+            ]
+        )?
+        .wait()?
+        .success());
 
         Ok(())
     }
@@ -204,9 +206,7 @@ impl App {
 
     fn format_all(&self) {
         self.list_files().par_bridge().for_each(|file| {
-            Command::new(&self.clang_format_path)
-                .args(&["-i", &file])
-                .spawn()
+            cmd(&self.clang_format_path, &["-i", &file])
                 .unwrap()
                 .wait()
                 .unwrap();
@@ -242,22 +242,23 @@ FLAGS:
     }
 
     fn configure(&self) -> Result<(), Box<dyn Error>> {
-        assert!(Command::new("git")
-            .args(&[
+        assert!(cmd(
+            "git",
+            &[
                 "config",
                 "--global",
                 "user.email",
                 &format!("{}@automation.bot", self.bot_name),
-            ])
-            .spawn()?
-            .wait()?
-            .success());
+            ]
+        )?
+        .wait()?
+        .success());
 
-        assert!(Command::new("git")
-            .args(&["config", "--global", "user.name", &self.bot_name])
-            .spawn()?
-            .wait()?
-            .success());
+        assert!(
+            cmd("git", &["config", "--global", "user.name", &self.bot_name])?
+                .wait()?
+                .success()
+        );
 
         Ok(())
     }
@@ -320,29 +321,17 @@ FLAGS:
         self.format_all();
 
         if !matches.is_present("amend") {
-            assert!(Command::new("git")
-                .args(&["commit", "-am", "cpp-auto-formatter"])
-                .spawn()?
+            assert!(cmd("git", &["commit", "-am", "cpp-auto-formatter"])?
                 .wait()?
                 .success());
 
-            assert!(Command::new("git")
-                .args(&["push"])
-                .spawn()?
-                .wait()?
-                .success());
+            assert!(cmd("git", &["push"])?.wait()?.success());
         } else {
-            assert!(Command::new("git")
-                .args(&["commit", "-a", "--amend", "--no-edit"])
-                .spawn()?
+            assert!(cmd("git", &["commit", "-a", "--amend", "--no-edit"])?
                 .wait()?
                 .success());
 
-            assert!(Command::new("git")
-                .args(&["push", "--force"])
-                .spawn()?
-                .wait()?
-                .success());
+            assert!(cmd("git", &["push", "--force"])?.wait()?.success());
         }
 
         Ok(())
@@ -355,9 +344,7 @@ FLAGS:
         self.format_all();
 
         process::exit(
-            Command::new("git")
-                .args(&["diff", "--exit-code"])
-                .spawn()?
+            cmd("git", &["diff", "--exit-code"])?
                 .wait()?
                 .code()
                 .unwrap_or(1),
@@ -386,4 +373,13 @@ fn ref_to_branch(r#ref: &str) -> &str {
         r#ref
     );
     &r#ref[expected_prefix.len()..]
+}
+
+fn cmd<S: AsRef<OsStr>>(program: S, args: &[&str]) -> Result<Child, Box<dyn Error>> {
+    print!("> Running: {}", program.as_ref().to_str().unwrap());
+    for a in args {
+        print!(" {}", a);
+    }
+    println!();
+    Ok(Command::new(program).args(args).spawn()?)
 }
