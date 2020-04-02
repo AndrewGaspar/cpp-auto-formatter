@@ -225,7 +225,7 @@ impl App {
         let mut headers = header::HeaderMap::new();
         headers.insert(
             header::AUTHORIZATION,
-            header::HeaderValue::from_str(&format!("Bearer {}", self.github_token))?,
+            header::HeaderValue::from_str(&format!("token {}", self.github_token))?,
         );
 
         Ok(Client::builder().default_headers(headers).build()?)
