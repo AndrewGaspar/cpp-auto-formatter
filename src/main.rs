@@ -225,9 +225,13 @@ impl App {
         let body = format!(
             r#"\
 ```
-{}
+USAGE:
+@{} format [--amend]
+
+FLAGS:
+--amend Amends the previous commit with formatting
 ```"#,
-            String::from_utf8(help)?
+            self.bot_name
         );
 
         self.github_client
@@ -293,9 +297,8 @@ impl App {
 
         let command_arr = shell_words::split(&payload.comment.body)?;
 
-        let mut app = clap::App::new(&format!("@{}", self.bot_name)).subcommand(
-            SubCommand::with_name("format").arg(Arg::with_name("squash").long("squash")),
-        );
+        let mut app = clap::App::new(&format!("@{}", self.bot_name))
+            .subcommand(SubCommand::with_name("format").arg(Arg::with_name("amend").long("amend")));
 
         let matches = match app.get_matches_from_safe_borrow(command_arr) {
             Ok(matches) => matches,
@@ -316,17 +319,31 @@ impl App {
         self.configure()?;
         self.format_all();
 
-        assert!(Command::new("git")
-            .args(&["commit", "-am", "cpp-auto-formatter"])
-            .spawn()?
-            .wait()?
-            .success());
+        if !matches.is_present("amend") {
+            assert!(Command::new("git")
+                .args(&["commit", "-am", "cpp-auto-formatter"])
+                .spawn()?
+                .wait()?
+                .success());
 
-        assert!(Command::new("git")
-            .args(&["push"])
-            .spawn()?
-            .wait()?
-            .success());
+            assert!(Command::new("git")
+                .args(&["push"])
+                .spawn()?
+                .wait()?
+                .success());
+        } else {
+            assert!(Command::new("git")
+                .args(&["commit", "-a", "--amend"])
+                .spawn()?
+                .wait()?
+                .success());
+
+            assert!(Command::new("git")
+                .args(&["push", "--force"])
+                .spawn()?
+                .wait()?
+                .success());
+        }
 
         Ok(())
     }
