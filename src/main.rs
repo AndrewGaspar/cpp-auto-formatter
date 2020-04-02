@@ -161,7 +161,8 @@ impl App {
                 &format!(
                     "https://x-access-token:{}@github.com/{}.git",
                     self.github_token, full_name
-                )
+                ),
+                ".",
             ])
             .spawn()?
             .wait()?
@@ -177,7 +178,8 @@ impl App {
                 &format!(
                     "https://x-access-token:{}@github.com/{}.git",
                     self.github_token, full_name
-                )
+                ),
+                ".",
             ])
             .spawn()?
             .wait()?
