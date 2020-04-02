@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 // Events
 
@@ -40,6 +40,7 @@ pub struct GitHubIssuePullRequest {
 
 #[derive(Deserialize, Debug)]
 pub struct GitHubPullRequest {
+    pub comments_url: String,
     pub head: GitHubPullRequestBranch,
 }
 
@@ -52,4 +53,10 @@ pub struct GitHubPullRequestBranch {
 #[derive(Deserialize, Debug)]
 pub struct GitHubRepository {
     pub full_name: String,
+}
+
+/// https://developer.github.com/v3/issues/comments/#create-a-comment
+#[derive(Serialize, Debug)]
+pub struct GitHubIssueCreate {
+    pub body: String,
 }

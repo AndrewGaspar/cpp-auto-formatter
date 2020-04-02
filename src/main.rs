@@ -32,6 +32,7 @@ struct App {
     github_workspace: PathBuf,
     bot_name: String,
     github_token: String,
+    github_client: Client,
 }
 
 impl App {
@@ -127,6 +128,19 @@ impl App {
 
         let github_token = matches.value_of("github-token").unwrap().to_owned();
 
+        let github_client = {
+            let mut headers = header::HeaderMap::new();
+            headers.insert(
+                header::AUTHORIZATION,
+                header::HeaderValue::from_str(&format!("token {}", github_token))?,
+            );
+
+            Client::builder()
+                .user_agent("cpp-auto-formatter")
+                .default_headers(headers)
+                .build()?
+        };
+
         let app = App {
             clang_format_path,
             includes,
@@ -134,6 +148,7 @@ impl App {
             github_workspace: PathBuf::new(),
             bot_name: matches.value_of("bot-name").unwrap().into(),
             github_token,
+            github_client,
         };
 
         if let Some(matches) = matches.subcommand_matches("list") {
@@ -198,7 +213,22 @@ impl App {
         });
     }
 
-    fn output_help(&self, _app: clap::App) {}
+    fn output_help(
+        &self,
+        app: &clap::App,
+        pull_request: GitHubPullRequest,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut help = Vec::new();
+        app.write_help(&mut help)?;
+
+        self.github_client
+            .post(&pull_request.comments_url)
+            .json(&GitHubIssueCreate {
+                body: String::from_utf8(help)?,
+            })
+            .send()?;
+        Ok(())
+    }
 
     fn configure(&self) -> Result<(), Box<dyn Error>> {
         assert!(Command::new("git")
@@ -221,26 +251,12 @@ impl App {
         Ok(())
     }
 
-    fn github_client(&self) -> Result<Client, Box<dyn Error>> {
-        let mut headers = header::HeaderMap::new();
-        headers.insert(
-            header::AUTHORIZATION,
-            header::HeaderValue::from_str(&format!("token {}", self.github_token))?,
-        );
-
-        Ok(Client::builder()
-            .user_agent("cpp-auto-formatter")
-            .default_headers(headers)
-            .build()?)
-    }
-
     fn command(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         if env::var("GITHUB_EVENT_NAME")? != "issue_comment" {
             eprintln!("Error: This action is only compatible with 'issue_comment' events");
             process::exit(1);
         }
 
-        let client = self.github_client()?;
         let payload: GitHubIssueCommentEvent = dbg!(load_payload()?);
 
         if !payload
@@ -254,7 +270,7 @@ impl App {
 
         let pull_request = match payload.issue.pull_request {
             Some(pr) => {
-                let response = dbg!(client.get(&pr.url).send()?);
+                let response = dbg!(self.github_client.get(&pr.url).send()?);
                 if !response.status().is_success() {
                     println!("Error: {}", response.text()?);
                     std::process::exit(1);
@@ -277,7 +293,7 @@ impl App {
         let matches = match app.get_matches_from_safe_borrow(command_arr) {
             Ok(matches) => matches,
             Err(_) => {
-                self.output_help(app);
+                self.output_help(&app, pull_request)?;
                 std::process::exit(1);
             }
         };
@@ -285,7 +301,7 @@ impl App {
         let _matches = if let Some(matches) = matches.subcommand_matches("format") {
             matches
         } else {
-            self.output_help(app);
+            self.output_help(&app, pull_request)?;
             std::process::exit(1);
         };
 
