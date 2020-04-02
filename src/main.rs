@@ -13,6 +13,8 @@ use std::{
 // Third Party Imports
 use clap::{Arg, ArgMatches, SubCommand};
 use glob::Pattern;
+use reqwest::header;
+use serde::de::DeserializeOwned;
 
 mod github;
 
@@ -29,6 +31,7 @@ struct App {
     excludes: Vec<Pattern>,
     github_workspace: PathBuf,
     bot_name: String,
+    github_token: String,
 }
 
 impl App {
@@ -37,8 +40,10 @@ impl App {
             .author("Andrew Gaspar <andrew.gaspar@outlook.com>")
             .about("Runner code for executing clang-format")
             .arg(
-                Arg::with_name("github-action")
-                    .long("github-action")
+                Arg::with_name("github-token")
+                    .long("github-token")
+                    .takes_value(true)
+                    .required(true)
             )
             .arg(
                 Arg::with_name("clang-format-version")
@@ -120,12 +125,15 @@ impl App {
             env::set_current_dir(PathBuf::from(github_workspace))?;
         }
 
+        let github_token = matches.value_of("github-token").unwrap().to_owned();
+
         let app = App {
             clang_format_path,
             includes,
             excludes,
             github_workspace: PathBuf::new(),
             bot_name: matches.value_of("bot-name").unwrap().into(),
+            github_token,
         };
 
         if let Some(matches) = matches.subcommand_matches("list") {
@@ -138,6 +146,26 @@ impl App {
             ("check", matches) => app.check(matches.unwrap())?,
             _ => panic!("Unexcepted subcommand"),
         }
+
+        Ok(())
+    }
+
+    fn clone(&self, repo: &GitHubRepository, r#ref: &str) -> Result<(), Box<dyn Error>> {
+        assert!(Command::new("git")
+            .args(&[
+                "clone",
+                "-b",
+                r#ref,
+                "--depth",
+                "1",
+                &format!(
+                    "https://x-access-token:{}@github.com/{}.git",
+                    self.github_token, repo.full_name
+                )
+            ])
+            .spawn()?
+            .wait()?
+            .success());
 
         Ok(())
     }
@@ -171,7 +199,7 @@ impl App {
 
     fn output_help(&self, _app: clap::App) {}
 
-    fn configure_author(&self) -> Result<(), Box<dyn Error>> {
+    fn configure(&self) -> Result<(), Box<dyn Error>> {
         assert!(Command::new("git")
             .args(&[
                 "config",
@@ -184,12 +212,24 @@ impl App {
             .success());
 
         assert!(Command::new("git")
-            .args(&["config", "--global", "user.name", &self.bot_name,])
+            .args(&["config", "--global", "user.name", &self.bot_name])
             .spawn()?
             .wait()?
             .success());
 
         Ok(())
+    }
+
+    fn github_client(&self) -> Result<reqwest::blocking::Client, Box<dyn Error>> {
+        let mut headers = header::HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            header::HeaderValue::from_str(&format!("Bearer {}", self.github_token))?,
+        );
+
+        Ok(reqwest::blocking::Client::builder()
+            .default_headers(headers)
+            .build()?)
     }
 
     fn command(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
@@ -198,7 +238,8 @@ impl App {
             process::exit(1);
         }
 
-        let payload = load_payload()?;
+        let client = self.github_client()?;
+        let payload: GitHubIssueCommentEvent = dbg!(load_payload()?);
 
         if !payload
             .comment
@@ -210,7 +251,7 @@ impl App {
         }
 
         let pull_request = match payload.issue.pull_request {
-            Some(pr) => reqwest::blocking::get(&pr.url)?.json::<GitHubPullRequest>()?,
+            Some(pr) => dbg!(client.get(&pr.url).send()?.json::<GitHubPullRequest>()?),
             None => {
                 eprintln!("Error: cpp-auto-formatter only works with PR comments");
                 std::process::exit(1);
@@ -238,8 +279,8 @@ impl App {
             std::process::exit(1);
         };
 
-        self.configure_author()?;
-
+        self.clone(&pull_request.head.repo, &pull_request.head.r#ref)?;
+        self.configure()?;
         self.format_all();
 
         assert!(Command::new("git")
@@ -248,17 +289,20 @@ impl App {
             .wait()?
             .success());
 
-        // assert!(Command::new("git")
-        //     .args(&["push", "-u", "origin", branch])
-        //     .spawn()?
-        //     .wait()?
-        //     .success());
+        assert!(Command::new("git")
+            .args(&["push"])
+            .spawn()?
+            .wait()?
+            .success());
 
         Ok(())
     }
 
     fn check(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+        let payload: GitHubPushEvent = dbg!(load_payload()?);
+        self.clone(&payload.repository, &payload.after)?;
         self.format_all();
+
         process::exit(
             Command::new("git")
                 .args(&["diff", "--exit-code"])
@@ -277,7 +321,7 @@ impl App {
     }
 }
 
-fn load_payload() -> Result<GitHubIssueCommentEvent, Box<dyn Error>> {
+fn load_payload<T: DeserializeOwned>() -> Result<T, Box<dyn Error>> {
     let github_event_path = env::var("GITHUB_EVENT_PATH")?;
     let github_event = std::fs::read_to_string(&github_event_path)?;
     Ok(serde_json::from_str(dbg!(&github_event))?)

@@ -105,6 +105,41 @@ pub struct GitHubIssueCommentEvent {
 
 #[allow(unused)]
 #[derive(Deserialize, Debug)]
+pub struct GitHubPushEvent {
+    pub r#ref: String,
+    pub before: String,
+    pub after: String,
+    pub created: bool,
+    pub deleted: bool,
+    pub forced: bool,
+    pub base_ref: Option<String>,
+    pub compare: String,
+    pub commits: Vec<GitHubCommit>,
+    pub head_commit: Option<GitHubCommit>,
+    pub repository: GitHubRepository,
+    pub pusher: GitHubAuthor,
+    pub sender: GitHubUser,
+}
+
+#[allow(unused)]
+#[derive(Deserialize, Debug)]
+pub struct GitHubCommit {
+    pub sha: String,
+    pub message: String,
+    pub author: GitHubAuthor,
+    pub url: String,
+    pub distinct: bool,
+}
+
+#[allow(unused)]
+#[derive(Deserialize, Debug)]
+pub struct GitHubAuthor {
+    pub name: String,
+    pub email: String,
+}
+
+#[allow(unused)]
+#[derive(Deserialize, Debug)]
 pub struct GitHubIssueComment {
     pub url: String,
     pub html_url: String,
@@ -207,6 +242,18 @@ pub struct GitHubPullRequest {
     pub base: GitHubPullRequestBranch,
     pub author_association: String,
     pub draft: bool,
+    pub merged: bool,
+    pub mergeable: bool,
+    pub rebaseable: bool,
+    pub mergeable_state: String,
+    pub merged_by: GitHubUser,
+    pub comments: usize,
+    pub review_comments: usize,
+    pub maintainer_can_modify: bool,
+    pub commits: usize,
+    pub additions: usize,
+    pub deletions: usize,
+    pub changed_files: usize,
 }
 
 #[allow(unused)]
@@ -216,4 +263,5 @@ pub struct GitHubPullRequestBranch {
     pub r#ref: String,
     pub sha: String,
     pub user: GitHubUser,
+    pub repo: GitHubRepository,
 }

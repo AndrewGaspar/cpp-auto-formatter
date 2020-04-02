@@ -3,6 +3,10 @@ description:
   C++ Auto-Format provides the ability to both auto-format your code, and to
   check that your code is formatted.
 inputs:
+  token:
+    description:
+      The token used to authenticate with GitHub.
+    required: true
   clangFormatVersion:
     description:
       Major Clang Version number. Supports clang 5 to 10. Default 10
@@ -31,6 +35,8 @@ runs:
   using: 'docker'
   image: '../Dockerfile'
   args:
+  - --github-token
+  - ${{ inputs.token }}
   - --clang-format-version
   - ${{ inputs.clangFormatVersion }}
   - --include
