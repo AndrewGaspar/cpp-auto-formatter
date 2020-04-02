@@ -150,7 +150,7 @@ impl App {
         Ok(())
     }
 
-    fn clone(&self, repo: &GitHubRepository, r#ref: &str) -> Result<(), Box<dyn Error>> {
+    fn clone(&self, full_name: &str, r#ref: &str) -> Result<(), Box<dyn Error>> {
         assert!(Command::new("git")
             .args(&[
                 "clone",
@@ -160,7 +160,7 @@ impl App {
                 "1",
                 &format!(
                     "https://x-access-token:{}@github.com/{}.git",
-                    self.github_token, repo.full_name
+                    self.github_token, full_name
                 )
             ])
             .spawn()?
@@ -279,7 +279,7 @@ impl App {
             std::process::exit(1);
         };
 
-        self.clone(&pull_request.head.repo, &pull_request.head.r#ref)?;
+        self.clone(&pull_request.head.repo.full_name, &pull_request.head.r#ref)?;
         self.configure()?;
         self.format_all();
 
@@ -300,7 +300,7 @@ impl App {
 
     fn check(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         let payload: GitHubPushEvent = dbg!(load_payload()?);
-        self.clone(&payload.repository, &payload.after)?;
+        self.clone(&payload.repository.full_name, &payload.after)?;
         self.format_all();
 
         process::exit(
