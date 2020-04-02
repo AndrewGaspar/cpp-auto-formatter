@@ -226,10 +226,10 @@ impl App {
             r#"\
 ```
 USAGE:
-@{} format [--amend]
+    @{} format [--amend]
 
 FLAGS:
---amend Amends the previous commit with formatting
+    --amend Amends the previous commit with formatting
 ```"#,
             self.bot_name
         );
