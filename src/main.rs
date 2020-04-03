@@ -269,7 +269,7 @@ FLAGS:
             process::exit(1);
         }
 
-        let payload: GitHubIssueCommentEvent = dbg!(load_payload()?);
+        let payload: GitHubIssueCommentEvent = load_payload()?;
 
         if !payload
             .comment
@@ -282,12 +282,12 @@ FLAGS:
 
         let pull_request = match payload.issue.pull_request {
             Some(pr) => {
-                let response = dbg!(self.github_client.get(&pr.url).send()?);
+                let response = self.github_client.get(&pr.url).send()?;
                 if !response.status().is_success() {
                     println!("Error: {}", response.text()?);
                     std::process::exit(1);
                 } else {
-                    dbg!(response.json::<GitHubPullRequest>()?)
+                    (response.json::<GitHubPullRequest>()?)
                 }
             }
             None => {
@@ -342,7 +342,7 @@ FLAGS:
     }
 
     fn check(&self, _matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
-        let payload: GitHubPushEvent = dbg!(load_payload()?);
+        let payload: GitHubPushEvent = load_payload()?;
         let branch = ref_to_branch(&payload.r#ref);
         self.clone(&payload.repository.full_name, branch, 1)?;
         self.format_all();
@@ -366,7 +366,7 @@ FLAGS:
 fn load_payload<T: DeserializeOwned>() -> Result<T, Box<dyn Error>> {
     let github_event_path = env::var("GITHUB_EVENT_PATH")?;
     let github_event = std::fs::read_to_string(&github_event_path)?;
-    Ok(serde_json::from_str(dbg!(&github_event))?)
+    Ok(serde_json::from_str(&github_event)?)
 }
 
 fn ref_to_branch(r#ref: &str) -> &str {
