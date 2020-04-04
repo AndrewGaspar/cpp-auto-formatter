@@ -1,0 +1,15 @@
+name: Cache Image
+on: push
+  branches:
+    - master
+jobs:
+  image-cache:
+    name: Cache Image
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: whoan/docker-build-with-cache-action@v4
+      with:
+        image_name: andrewgaspar/cpp-auto-formatter-cache
+        username: ${{ secrets.DOCKER_USER }}
+        password: ${{ secrets.DOCKER_TOKEN }}
