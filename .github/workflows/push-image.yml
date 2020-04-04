@@ -1,7 +1,8 @@
 name: Cache Image
-on: push
-  branches:
-    - master
+on:
+  push:
+    branches:
+      - master
 jobs:
   image-cache:
     name: Cache Image
