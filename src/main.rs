@@ -287,7 +287,7 @@ FLAGS:
                     println!("Error: {}", response.text()?);
                     std::process::exit(1);
                 } else {
-                    (response.json::<GitHubPullRequest>()?)
+                    response.json::<GitHubPullRequest>()?
                 }
             }
             None => {
