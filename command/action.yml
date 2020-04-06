@@ -33,7 +33,7 @@ inputs:
     default: 'cpp-auto-formatter'
 runs:
   using: 'docker'
-  image: '../Dockerfile'
+  image: docker://andrewgaspar/cpp-auto-formatter:latest
   args:
   - --github-token
   - ${{ inputs.token }}
