@@ -28,7 +28,7 @@ inputs:
 outputs:
 runs:
   using: 'docker'
-  image: '../Dockerfile'
+  image: docker://andrewgaspar/cpp-auto-formatter:v0.1.0
   args:
   - --github-token
   - ${{ inputs.token }}
