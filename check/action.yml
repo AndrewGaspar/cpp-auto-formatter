@@ -25,7 +25,6 @@ inputs:
       not be formatted.
     required: false
     default: '""'
-outputs:
 runs:
   using: 'docker'
   image: docker://andrewgaspar/cpp-auto-formatter:latest
